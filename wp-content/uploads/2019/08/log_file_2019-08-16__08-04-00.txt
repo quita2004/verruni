@@ -1,0 +1,75 @@
+
+---Downloaded files---
+The import files for: Theme Demo Content were successfully downloaded!
+Initial max execution time = 200
+Files info:
+Site URL = http://localhost/verruni
+Data file = C:\xampp\htdocs\verruni/wp-content/themes/shop-elite/assets/data/shop-elite.xml
+Widget file = C:\xampp\htdocs\verruni/wp-content/themes/shop-elite/assets/data/shop-elite.wie
+Customizer file = C:\xampp\htdocs\verruni/wp-content/themes/shop-elite/assets/data/shop-elite.dat
+Redux files:
+not defined!
+
+------
+New AJAX call!
+
+
+------
+New AJAX call!
+
+
+------
+New AJAX call!
+
+
+------
+New AJAX call!
+
+
+------
+New AJAX call!
+
+
+------
+New AJAX call!
+
+
+---Importing widgets---
+Sidebar : 
+
+Tìm kiếm - No Title - Widget already exists
+Bài viết mới - No Title - Widget already exists
+Phản hồi gần đây - No Title - Widget already exists
+Lưu trữ - No Title - Widget already exists
+Chuyên mục - No Title - Widget already exists
+Meta - No Title - Widget already exists
+
+Home Page Full Width Column : 
+
+SE: Woo Category - No Title - Imported
+SE: Woo Listings - Featured Products - Imported
+SE: Call To Action - Up to 70% Off - Imported
+SE: Woo Category Products - Women&#039;s Clothing - Imported
+SE: Woo Category Products - Latest Products - Imported
+SE: Posts Listings - What&#039;s Trending - Imported
+SE: Call To Action - No Title - Imported
+
+Footer Column One : 
+
+SE: Social Menu - Find Us - Imported
+
+Footer Column Two : 
+
+Bài viết mới - Stay Updated - Imported
+
+Footer Column Three : 
+
+Sản phẩm - On Sale Products - Imported
+
+
+
+---Importing customizer settings---
+Customizer settings import finished!
+
+---pt-ocdi/after_import---
+
