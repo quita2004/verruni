@@ -1033,7 +1033,8 @@ if ( ! class_exists( 'YITH_WCWL_Admin_Init' ) ) {
 							'title' => 'Get Support and Pro Features'
 						)
 					),
-					'id'      => 'yith_wcwl_general_videobox'
+					'id'      => 'yith_wcwl_general_videobox',
+                    'value' => ''
 				),
 
 				'general_section_start' => array(

@@ -10,10 +10,12 @@ namespace Automattic\WooCommerce\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use \Automattic\WooCommerce\Admin\Notes\WC_Admin_Notes;
+use \Automattic\WooCommerce\Admin\Notes\WC_Admin_Notes_Facebook_Extension;
 use \Automattic\WooCommerce\Admin\Notes\WC_Admin_Notes_Historical_Data;
 use \Automattic\WooCommerce\Admin\Notes\WC_Admin_Notes_Order_Milestones;
 use \Automattic\WooCommerce\Admin\Notes\WC_Admin_Notes_Welcome_Message;
-use \Automattic\WooCommerce\Admin\Notes\WC_Admin_Notes_Woo_Subscriptions_Notes;;
+use \Automattic\WooCommerce\Admin\Notes\WC_Admin_Notes_Woo_Subscriptions_Notes;
+use \Automattic\WooCommerce\Admin\Notes\WC_Admin_Notes_Tracking_Opt_In;
 
 /**
  * Feature plugin main class.
@@ -77,7 +79,7 @@ class FeaturePlugin {
 	public function on_deactivation() {
 		// Check if we are deactivating due to dependencies not being satisfied.
 		// If WooCommerce is disabled we can't include files that depend upon it.
-		if ( ! $this->check_dependencies() ) {
+		if ( ! $this->has_satisfied_dependencies() ) {
 			return;
 		}
 
@@ -85,6 +87,7 @@ class FeaturePlugin {
 		ReportsSync::clear_queued_actions();
 		WC_Admin_Notes::clear_queued_actions();
 		wp_clear_scheduled_hook( 'wc_admin_daily' );
+		wp_clear_scheduled_hook( 'generate_category_lookup_table' );
 	}
 
 	/**
@@ -95,7 +98,7 @@ class FeaturePlugin {
 	public function on_plugins_loaded() {
 		$this->load_plugin_textdomain();
 
-		if ( ! $this->check_dependencies() ) {
+		if ( ! $this->has_satisfied_dependencies() ) {
 			add_action( 'admin_init', array( $this, 'deactivate_self' ) );
 			add_action( 'admin_notices', array( $this, 'render_dependencies_notice' ) );
 			return;
@@ -117,11 +120,10 @@ class FeaturePlugin {
 		$this->define( 'WC_ADMIN_ABSPATH', dirname( __DIR__ ) . '/' );
 		$this->define( 'WC_ADMIN_DIST_JS_FOLDER', 'dist/' );
 		$this->define( 'WC_ADMIN_DIST_CSS_FOLDER', 'dist/' );
-		$this->define( 'WC_ADMIN_FEATURES_PATH', WC_ADMIN_ABSPATH . 'includes/features/' );
 		$this->define( 'WC_ADMIN_PLUGIN_FILE', WC_ADMIN_ABSPATH . 'woocommerce-admin.php' );
 		// WARNING: Do not directly edit this version number constant.
 		// It is updated as part of the prebuild process from the package.json value.
-		$this->define( 'WC_ADMIN_VERSION_NUMBER', '0.17.0' );
+		$this->define( 'WC_ADMIN_VERSION_NUMBER', '0.22.0' );
 	}
 
 	/**
@@ -145,12 +147,17 @@ class FeaturePlugin {
 		// CRUD classes.
 		WC_Admin_Notes::init();
 
+		// Initialize category lookup.
+		CategoryLookup::instance()->init();
+
 		// Admin note providers.
 		// @todo These should be bundled in the features/ folder, but loading them from there currently has a load order issue.
 		new WC_Admin_Notes_Woo_Subscriptions_Notes();
 		new WC_Admin_Notes_Historical_Data();
 		new WC_Admin_Notes_Order_Milestones();
 		new WC_Admin_Notes_Welcome_Message();
+		new WC_Admin_Notes_Facebook_Extension();
+		new WC_Admin_Notes_Tracking_Opt_In();
 	}
 
 	/**
@@ -162,6 +169,11 @@ class FeaturePlugin {
 	public function replace_actionscheduler_store_class( $store_class ) {
 		// Don't override any other overrides.
 		if ( 'ActionScheduler_wpPostStore' !== $store_class ) {
+			return $store_class;
+		}
+
+		// Don't override if action scheduler is 3.0.0 or greater.
+		if ( version_compare( \ActionScheduler_Versions::instance()->latest_version(), '3.0', '>=' ) ) {
 			return $store_class;
 		}
 
@@ -197,18 +209,47 @@ class FeaturePlugin {
 	}
 
 	/**
+	 * Get an array of dependency error messages.
+	 *
+	 * @return array
+	 */
+	protected function get_dependency_errors() {
+		$errors                      = array();
+		$wordpress_version           = get_bloginfo( 'version' );
+		$minimum_wordpress_version   = '5.2';
+		$minimum_woocommerce_version = '3.6';
+		$wordpress_minimum_met       = version_compare( $wordpress_version, $minimum_wordpress_version, '>=' );
+		$woocommerce_minimum_met     = class_exists( 'WooCommerce' ) && version_compare( WC_VERSION, $minimum_woocommerce_version, '>=' );
+
+		if ( ! $woocommerce_minimum_met ) {
+			$errors[] = sprintf(
+				/* translators: 1: URL of WooCommerce plugin, 2: The minimum WooCommerce version number */
+				__( 'The WooCommerce Admin feature plugin requires <a href="%1$s">WooCommerce</a> %2$s or greater to be installed and active.', 'woocommerce-admin' ),
+				'https://wordpress.org/plugins/woocommerce/',
+				$minimum_woocommerce_version
+			);
+		}
+
+		if ( ! $wordpress_minimum_met ) {
+			$errors[] = sprintf(
+				/* translators: 1: URL of WordPress.org, 2: The minimum WordPress version number */
+				__( 'The WooCommerce Admin feature plugin requires <a href="%1$s">WordPress</a> %2$s or greater to be installed and active.', 'woocommerce-admin' ),
+				'https://wordpress.org/',
+				$minimum_wordpress_version
+			);
+		}
+
+		return $errors;
+	}
+
+	/**
 	 * Returns true if all dependencies for the wc-admin plugin are loaded.
 	 *
 	 * @return bool
 	 */
-	protected function check_dependencies() {
-		$woocommerce_minimum_met = class_exists( 'WooCommerce' ) && version_compare( WC_VERSION, '3.6', '>=' );
-		if ( ! $woocommerce_minimum_met ) {
-			return false;
-		}
-
-		$wordpress_version = get_bloginfo( 'version' );
-		return version_compare( $wordpress_version, '5.2.0', '>=' );
+	protected function has_satisfied_dependencies() {
+		$dependency_errors = $this->get_dependency_errors();
+		return 0 === count( $dependency_errors );
 	}
 
 	/**
@@ -232,25 +273,8 @@ class FeaturePlugin {
 	 * Notify users of the plugin requirements.
 	 */
 	public function render_dependencies_notice() {
-		// The notice varies by WordPress version.
-		$wordpress_version    = get_bloginfo( 'version' );
-		$has_valid_wp_version = version_compare( $wordpress_version, '5.2.0', '>=' );
-
-		if ( $has_valid_wp_version ) {
-			$message = sprintf(
-				/* translators: URL of WooCommerce plugin */
-				__( 'The WooCommerce Admin feature plugin requires <a href="%s">WooCommerce</a> 3.6 or greater to be installed and active.', 'woocommerce-admin' ),
-				'https://wordpress.org/plugins/woocommerce/'
-			);
-		} else {
-			$message = sprintf(
-				/* translators: 1: URL of WordPress.org, 2: URL of WooCommerce plugin */
-				__( 'The WooCommerce Admin feature plugin requires both <a href="%1$s">WordPress</a> 5.2 or greater and <a href="%2$s">WooCommerce</a> 3.6 or greater to be installed and active.', 'woocommerce-admin' ),
-				'https://wordpress.org/',
-				'https://wordpress.org/plugins/woocommerce/'
-			);
-		}
-		printf( '<div class="error"><p>%s</p></div>', $message ); /* WPCS: xss ok. */
+		$message = $this->get_dependency_errors();
+		printf( '<div class="error"><p>%s</p></div>', implode( ' ', $message ) ); /* phpcs:ignore xss ok. */
 	}
 
 	/**
@@ -263,7 +287,7 @@ class FeaturePlugin {
 			__( 'Or you can download a pre-built version of the plugin by visiting <a href="%1$s">the releases page in the repository</a>.', 'woocommerce-admin' ),
 			'https://github.com/woocommerce/woocommerce-admin/releases'
 		);
-		printf( '<div class="error"><p>%s %s</p></div>', $message_one, $message_two ); /* WPCS: xss ok. */
+		printf( '<div class="error"><p>%s %s</p></div>', $message_one, $message_two ); /* phpcs:ignore xss ok. */
 	}
 
 	/**
@@ -281,7 +305,7 @@ class FeaturePlugin {
 	 * Adds a menu item for the wc-admin devdocs.
 	 */
 	public function register_devdocs_page() {
-		if ( Loader::is_feature_enabled( 'devdocs' ) && defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) {
+		if ( Loader::is_dev() ) {
 			wc_admin_register_page(
 				array(
 					'title'  => 'DevDocs',

@@ -26,7 +26,7 @@ class Controller extends \WC_REST_Reports_Controller {
 	 *
 	 * @var string
 	 */
-	protected $namespace = 'wc/v4';
+	protected $namespace = 'wc-analytics';
 
 	/**
 	 * Route base.
@@ -157,6 +157,7 @@ class Controller extends \WC_REST_Reports_Controller {
 				'readonly'    => true,
 			),
 			'orders_count'  => array(
+				'title'       => __( 'Discounted Orders', 'woocommerce-admin' ),
 				'description' => __( 'Number of discounted orders.', 'woocommerce-admin' ),
 				'type'        => 'integer',
 				'context'     => array( 'view', 'edit' ),

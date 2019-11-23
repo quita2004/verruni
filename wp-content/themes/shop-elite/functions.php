@@ -185,3 +185,14 @@ add_action( 'init', 'shop_elite_get_customizer_value');
  * Load all required files.
  */
 require get_template_directory() . '/inc/init.php';
+
+add_filter( 'woocommerce_checkout_fields' , 'custom_override_checkout_fields' );
+function custom_override_checkout_fields( $fields ) {
+     unset($fields['billing']['billing_postcode']);
+     unset($fields['billing']['billing_state']);
+     unset($fields['billing']['billing_address_2']);
+	unset($fields['billing']['billing_company']);
+	unset($fields['billing']['billing_country']);
+	unset($fields['billing']['billing_last_name']);
+     return $fields;
+}

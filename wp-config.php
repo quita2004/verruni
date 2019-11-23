@@ -1,4 +1,5 @@
 <?php
+
 /**
  * The base configuration for WordPress
  *
@@ -85,6 +86,12 @@ define( 'WP_DEBUG', false );
 if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', dirname( __FILE__ ) . '/' );
 }
+
+/*** FTP login settings ***/
+define("FTP_HOST", "verruni.vn");
+define("FTP_USER", "quita");
+define("FTP_PASS", "qui09");
+define('FS_METHOD', 'direct');
 
 /** Sets up WordPress vars and included files. */
 require_once( ABSPATH . 'wp-settings.php' );

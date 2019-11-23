@@ -24,7 +24,7 @@ class Controller extends \WC_REST_Reports_Controller {
 	 *
 	 * @var string
 	 */
-	protected $namespace = 'wc/v4';
+	protected $namespace = 'wc-analytics';
 
 	/**
 	 * Route base.
@@ -119,7 +119,7 @@ class Controller extends \WC_REST_Reports_Controller {
 			return true;
 		}
 
-		$request  = new \WP_REST_Request( 'GET', '/wc/v4/reports' );
+		$request  = new \WP_REST_Request( 'GET', '/wc-analytics/reports' );
 		$response = rest_do_request( $request );
 
 		if ( is_wp_error( $response ) ) {
@@ -157,8 +157,9 @@ class Controller extends \WC_REST_Reports_Controller {
 
 					$stat            = $prefix . '/' . $property_key;
 					$allowed_stats[] = $stat;
+					$stat_label      = empty( $schema_info['title'] ) ? $schema_info['description'] : $schema_info['title'];
 
-					$this->labels[ $stat ]  = trim( preg_replace( '/\W+/', ' ', $schema_info['description'] ) );
+					$this->labels[ $stat ]  = trim( preg_replace( '/\W+/', ' ', $stat_label ) );
 					$this->formats[ $stat ] = isset( $schema_info['format'] ) ? $schema_info['format'] : 'number';
 				}
 
